@@ -1,12 +1,11 @@
 # Primer design
 
-The repository contains scripts to design only left primers using 3 modes: 
+The repository contains python scripts for high-throughput designing of left primers using 3 modes: 
 
 - **main.py:** script to design primers give a distance from the 3'end
 - **main_informed.py:** script to design primers in an informed manner, using alignments in a bam file to target regions with high coverage
 - **main_5end:** script to generate primers at 5'end, aimed for full-length amplification   
 
-A python pipeline for high-throughput 3'end primer design
 
 ## Inputs:
 
