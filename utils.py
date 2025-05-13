@@ -278,7 +278,7 @@ def make_primer_dataframe(gene, primer_seqs, primer_positions, TM, GC, ampl_size
 
     
 
-def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib):
+def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib, min_primer_size ,max_primer_size):
     output_dir = f"{out_dir}/{gene_id}_out"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -302,7 +302,7 @@ def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib):
     print("Running job: 4_make_primer3_input")
     sequence= mRNA[-ampl_size:]
     primer3_input_file = f"{output_dir}/{gene_id}_primer3_input_{strand_label}.txt"
-    primer3_input_path = write_primer3_input(gene_id, sequence, primer3_input_file, TM, min_primer=18, max_primer=22, repeat_lib=lib)
+    primer3_input_path = write_primer3_input(gene_id, sequence, primer3_input_file, TM, min_primer=min_primer_size, max_primer=max_primer_size, repeat_lib=lib)
     print(f"Primer3 input file written to: {primer3_input_path}")
     primer3_output_file = f"{output_dir}/{gene_id}_primer3_out.txt"
     PrimerFasta_output_file = f"{out_dir}/primers.fa"
