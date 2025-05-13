@@ -25,9 +25,9 @@ A python pipeline for high-throughput 3'end primer design
 
 1. Pull Primer3 singularity container
 
-        `cd ./primer3`
+        cd ./primer3
 
-        `./PullSif.sh`
+        ./PullSif.sh
 
 2. Edit input parameters the job.pbs file
 3. Submit job
