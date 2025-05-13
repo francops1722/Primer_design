@@ -1,4 +1,4 @@
-# Primer_design
+# Primer design
 
 The repository contains scripts to design only left primers using 3 modes: 
 
