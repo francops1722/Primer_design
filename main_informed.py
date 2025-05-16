@@ -42,4 +42,4 @@ with open(gene_ids_file, 'r') as file:
 if __name__ == "__main__":
     for gene_id in gene_ids:
         if bam_file:
-            main(bam_file, gtf_file, gene_id, ref_genome, window, cov_thresh, min_primer_size, max_primer_size, max_product_size, min_product_size, TM, db, output_dir,repeat_lib)
+            main(bam_file, gtf_file, gene_id, ref_genome, window, cov_thresh, min_primer_size, max_primer_size, max_product_size, min_product_size, TM, db, output_dir, repeat_lib)

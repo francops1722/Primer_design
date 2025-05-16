@@ -187,6 +187,9 @@ def write_primer3_input2(gene_id, fasta_file, output_file, strand, min_primer=18
     with open(output_file_with_strand, 'w') as f:
         f.write(f"SEQUENCE_ID={gene_id}\n")
         f.write(f"SEQUENCE_TEMPLATE={sequence}\n")
+        # f.write("PRIMER_PICK_LEFT_PRIMER=1\n")
+        # f.write("PRIMER_PICK_RIGHT_PRIMER=0\n")
+        # # f.write("PRIMER_EXCLUDED_REGION=0,30\n")
         f.write(f"PRIMER_PRODUCT_SIZE_RANGE={min_product_size}-{max_product_size}\n")
         f.write("PRIMER_TASK=pick_primer_list\n")
         f.write("PRIMER_NUM_RETURN=5\n")

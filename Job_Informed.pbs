@@ -17,5 +17,6 @@ python3 main_informed.py --gene_id ./testdata/gene_ids.txt \
     --ref_genome /data/gent/vo/000/gvo00027/resources/Ensembl_genomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.dna.primary_assembly.chrIS_spikes_45S.fa \
     --window 60 \
     --cov_thresh 5 \
-    --out_dir ./Class1_cov1 \
-    --repeat_lib ./rep_lib/humrep_and_simple.txt
+    --repeat_lib /user/gent/446/vsc44685/ScratchVO_dir/NSQ2K_126_test/primer_design/rep_lib/humrep_and_simple.txt \
+    --out_dir ./Class1_cov1 
+    

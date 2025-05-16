@@ -105,8 +105,9 @@ def write_primer3_input(gene_id, mRNA, output_file, TM=60.0, min_primer=18, max_
     with open(output_file, 'w') as f:
         f.write(f"SEQUENCE_ID={gene_id}\n")
         f.write(f"SEQUENCE_TEMPLATE={mRNA}\n")
-        f.write("PRIMER_MIN_THREE_PRIME_DISTANCE=30\n")
+        #f.write("PRIMER_MIN_THREE_PRIME_DISTANCE=30\n")
         # f.write(f"PRIMER_PRODUCT_SIZE_RANGE={min_product_size}-{max_product_size}\n")
+        f.write("PRIMER_EXCLUDED_REGION=0,50\n")
         f.write("PRIMER_TASK=pick_primer_list\n")
         f.write("PRIMER_NUM_RETURN=10\n")
         f.write("PRIMER_OPT_SIZE=20\n")
