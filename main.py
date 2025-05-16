@@ -28,11 +28,13 @@ parser.add_argument('--min_primer_size', type=int, default=18, help='Min primer 
 parser.add_argument('--max_primer_size', type=int, default=18, help='Max primer size')
 parser.add_argument('--gtf_file', required=True, help='Path to the GTF file')
 parser.add_argument('--btw_index', default="/data/gent/vo/000/gvo00027/resources/Bowtie2_index/Homo_sapiens/Transcriptome_Homo_sapiens.GRCh38.109.chrIS_spikes_45S/bowtie2_index", help='Path to the bowtie2 index prefix')
-parser.add_argument('--transcriptome', required=True, default="/data/gent/vo/000/gvo00027/resources/Ensembl_transcriptomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.109.chrIS_spikes_45S.fa", help="path to transcriptome fasta")
+parser.add_argument('--transcriptome', default="/data/gent/vo/000/gvo00027/resources/Ensembl_transcriptomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.109.chrIS_spikes_45S.fa", help='Path to transcriptome(to get annotation of each transcript)')
 parser.add_argument('--dist', type=int, default=100, help='Distance to the end of the transcript')
 #parser.add_argument('--min_product_size', type=int, default=100, help='Min product size for primer design')
 parser.add_argument('--repeat_lib', default='.', help='path to repeat library for masking')
 parser.add_argument('--out_dir', default='.', help='Output directory for results')
+
+
 
 args = parser.parse_args()
 TM = args.Tm
@@ -43,14 +45,13 @@ out_dir = args.out_dir
 index = args.btw_index
 lib=args.repeat_lib
 transcriptome = args.transcriptome
-min_primer_size=args.min_primer_size
-max_primer_size=args.max_primer_size
+#transcriptome = "/data/gent/vo/000/gvo00027/resources/Ensembl_transcriptomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.109.chrIS_spikes_45S.fa"
 
 with open(gene_ids_file, 'r') as file:
     gene_ids = [line.strip() for line in file]
 if __name__ == "__main__":
     for gene_id in gene_ids:
-        sum_df = main(out_dir, gtf_file, gene_id, ampl_size, TM, lib, min_primer_size, max_primer_size)
+        sum_df = main(out_dir, gtf_file, gene_id, ampl_size, TM, lib)
     #run bowtie2
     PrimerFasta_output_file = f"{out_dir}/primers.fa"
     sam_file=f"{out_dir}/bowtie2_results.sam"

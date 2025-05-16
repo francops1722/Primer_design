@@ -14,10 +14,15 @@ def sbatch(job_name, command, index):
     subprocess.run(command, shell=True, check=True)
 
 def filter_gtf(gtf_file, gene_id, output_dir):
-    # Filter the GTF for the given gene_id.
-    command = f"grep 'gene_id \"{gene_id}\"' {gtf_file} > {output_dir}/gene_{gene_id}.gtf"
+    """Filter the GTF for the given gene_id"""
+    gtf_filtered = os.path.join(output_dir, f"gene_{gene_id}.gtf")
+    if os.path.exists(gtf_filtered):
+        print(f"Filtered GTF file already exists: {gtf_filtered}")
+        return None
+    else:
+        command = f"grep 'gene_id \"{gene_id}\"' {gtf_file} > {output_dir}/gene_{gene_id}.gtf"
     return command
-    
+
 def get_mane_transcript_id(output_dir, gene_id):
     """
     Read the filtered GTF file and extract the transcript ID corresponding to the MANE transcript.
@@ -99,16 +104,14 @@ def get_strand_from_gtf(gene_id, output_dir):
         return None
     
 
-def write_primer3_input(gene_id, mRNA, output_file, TM=60.0, min_primer=18, max_primer=20, repeat_lib="/user/gent/446/vsc44685/ScratchVO_dir/NSQ2K_126_test/primer_design/rep_lib/humrep_and_simple.txt"):
+def write_primer3_input(gene_id, mRNA, output_file, TM=60.0, min_primer=18, max_primer=20, repeat_lib="/rep_lib/humrep_and_simple.txt"):
     minTM = TM - 4
     maxTM = TM + 4
     with open(output_file, 'w') as f:
         f.write(f"SEQUENCE_ID={gene_id}\n")
         f.write(f"SEQUENCE_TEMPLATE={mRNA}\n")
-        #f.write("PRIMER_MIN_THREE_PRIME_DISTANCE=30\n")
-        # f.write(f"PRIMER_PRODUCT_SIZE_RANGE={min_product_size}-{max_product_size}\n")
-        f.write("PRIMER_EXCLUDED_REGION=0,50\n")
         f.write("PRIMER_TASK=pick_primer_list\n")
+        f.write("PRIMER_EXCLUDED_REGION=0,50\n")
         f.write("PRIMER_NUM_RETURN=10\n")
         f.write("PRIMER_OPT_SIZE=20\n")
         f.write("PRIMER_PICK_LEFT_PRIMER=1\n")
@@ -127,6 +130,10 @@ def write_primer3_input(gene_id, mRNA, output_file, TM=60.0, min_primer=18, max_
         f.write("=\n")
     return output_file
 
+
+# def Run_Primer3(input_file, output_dir):
+#     command = f"singularity run ./primer3/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+#     return command
 
 def Run_Primer3(input_file, output_dir):
     command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
@@ -195,10 +202,6 @@ def parse_primer3_output(file_path):
     return gene_id, primers, positions, TM, GC
                         
                         
-    
-    # Convert the primers dictionary to a list (or you can return the dict if you want the keys)
-    # primer_list = list(primers.values())
-    return gene_id, primers, positions
 
 def write_primers_to_fasta(gene_id, primers, output_path):
     """
@@ -228,6 +231,7 @@ def parse_transcriptome(transcriptome):
         for record in SeqIO.parse(fasta_file, "fasta"):
             transcript_info[record.id] = record.description
     return transcript_info
+
 #run alignment with bowtie it takes an index prefix and a fasta file with primers                
 def run_bowtie2_command(primers_fasta,index_prefix, output_file="bowtie2_results.sam"):
     input_file = "query.fasta"
@@ -279,12 +283,14 @@ def make_primer_dataframe(gene, primer_seqs, primer_positions, TM, GC, ampl_size
 
     
 
-def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib, min_primer_size ,max_primer_size):
+def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib):
     output_dir = f"{out_dir}/{gene_id}_out"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     filter_gtf_command = filter_gtf(gtf_file, gene_id, output_dir)
-    sbatch("filter_gtf", filter_gtf_command, 1)
+    if filter_gtf_command:
+        sbatch("filter_gtf", filter_gtf_command, 1)
+    
     #Step 1: Get the MANE transcript ID
     print("Running job: 2_Fetching_MANE_transcript_sequence")
     mane_tid = get_mane_transcript_id(output_dir, gene_id)
@@ -303,7 +309,7 @@ def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib, min_primer_size ,max_pr
     print("Running job: 4_make_primer3_input")
     sequence= mRNA[-ampl_size:]
     primer3_input_file = f"{output_dir}/{gene_id}_primer3_input_{strand_label}.txt"
-    primer3_input_path = write_primer3_input(gene_id, sequence, primer3_input_file, TM, min_primer=min_primer_size, max_primer=max_primer_size, repeat_lib=lib)
+    primer3_input_path = write_primer3_input(gene_id, sequence, primer3_input_file, TM, min_primer=18, max_primer=22, repeat_lib=lib)
     print(f"Primer3 input file written to: {primer3_input_path}")
     primer3_output_file = f"{output_dir}/{gene_id}_primer3_out.txt"
     PrimerFasta_output_file = f"{out_dir}/primers.fa"
@@ -311,7 +317,14 @@ def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib, min_primer_size ,max_pr
     primer3_command = Run_Primer3(primer3_input_file, primer3_output_file)
     sbatch("Run_Primer3", primer3_command, 5)
     gene, primer_seqs, primer_positions, TM, GC = parse_primer3_output(primer3_output_file)
-    write_primers_to_fasta(gene, primer_seqs, PrimerFasta_output_file)
+    # primer_seqs is a dictionary where keys are primer indices (e.g., 'primer_0', 'primer_1', ...)
+    # and values are the corresponding primer sequences (strings).
+    if not primer_seqs:
+        print("No primers found in primer_seqs. Exiting.")
+        return None
+    else:
+        write_primers_to_fasta(gene, primer_seqs, PrimerFasta_output_file)
+    
     print("Running job: 6_make_summary_files")
     summary_csv_file = f'{out_dir}/Primer3_summary.csv'
     df = make_primer_dataframe(gene, primer_seqs, primer_positions, TM, GC, ampl_size, summary_csv_file)

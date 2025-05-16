@@ -4,6 +4,7 @@ import os
 import subprocess
 import pandas as pd
 import argparse
+import re
 
 def sbatch(job_name, command, index):
     print(f"Running job: {index}_{job_name}")
@@ -11,13 +12,29 @@ def sbatch(job_name, command, index):
 
 def get_coverage(bam_file, output_dir):
     # Generate a BED file with coverage using bedtools genomecov.
-    command = ["ml purge; ml BEDTools/2.31.0-GCC-12.3.0;", 
-               "bedtools genomecov -ibam", bam_file, f"-bg > {output_dir}/coverage.bed"]
+    coverage_bed = os.path.join(output_dir, "coverage.bed")
+    if os.path.exists(coverage_bed):
+        print(f"Coverage file already exists: {coverage_bed}")
+        return None
+    else: 
+        command = ["ml purge; ml BEDTools/2.31.0-GCC-12.3.0;",
+        "bedtools genomecov -ibam", bam_file, f"-bg > {coverage_bed}"]
     return " ".join(command)
 
+# def get_coverage(bam_file, output_dir):
+#     # Generate a BED file with coverage using bedtools genomecov.
+#     command = ["ml purge; ml BEDTools/2.31.0-GCC-12.3.0;", 
+#                "bedtools genomecov -ibam", bam_file, f"-bg > {output_dir}/coverage.bed"]
+#     return " ".join(command)
+
 def filter_gtf(gtf_file, gene_id, output_dir):
-    # Filter the GTF for the given gene_id.
-    command = f"grep 'gene_id \"{gene_id}\"' {gtf_file} > {output_dir}/gene_{gene_id}.gtf"
+    """Filter the GTF for the given gene_id"""
+    gtf_filtered = os.path.join(output_dir, f"gene_{gene_id}.gtf")
+    if os.path.exists(gtf_filtered):
+        print(f"Filtered GTF file already exists: {gtf_filtered}")
+        return None
+    else:
+        command = f"grep 'gene_id \"{gene_id}\"' {gtf_file} > {output_dir}/gene_{gene_id}.gtf"
     return command
 
 def merge_exons(output_dir, gene_id):
@@ -28,7 +45,11 @@ def merge_exons(output_dir, gene_id):
     """
     input_file = f"{output_dir}/gene_{gene_id}.gtf"
     output_file = f"{output_dir}/gene_{gene_id}_merged_exons.bed"
-    command = f"ml purge; ml BEDTools/2.31.0-GCC-12.3.0; grep -w 'exon' {input_file} | bedtools sort -i - | bedtools merge -d 1000000 -i - > {output_file}"
+    if os.path.exists(output_file):
+        print(f"Filtered Exon-merged Bed file already exists: {output_file}")
+        return None
+    else:
+        command = f"ml purge; ml BEDTools/2.31.0-GCC-12.3.0; grep -w 'exon' {input_file} | bedtools sort -i - | bedtools merge -d 1000000 -i - > {output_file}"
     return command
 
 def reverse_complement(sequence):
@@ -171,8 +192,7 @@ def get_fasta_sequence(chrom, start_expanded, end_expanded, ref_genome, output_d
     command = f"ml purge; ml SAMtools/1.18-GCC-12.3.0; samtools faidx {ref_genome} {chrom}:{start_expanded}-{end_expanded} > {output_file}"
     return command
 
-
-def write_primer3_input2(gene_id, fasta_file, output_file, strand, min_primer=18, max_primer=20, min_product_size=20, max_product_size=60, TM=60.0, repeat_lib="./rep_lib/humrep_and_simple.txt"):
+def write_primer3_input2(gene_id, fasta_file, output_file, strand, TM, min_primer, max_primer, min_product_size, max_product_size, repeat_lib="/rep_lib/humrep_and_simple.txt"):
     with open(fasta_file, "r") as f:
         lines = f.readlines()
         sequence = "".join(lines[1:]).replace("\n", "")
@@ -187,9 +207,6 @@ def write_primer3_input2(gene_id, fasta_file, output_file, strand, min_primer=18
     with open(output_file_with_strand, 'w') as f:
         f.write(f"SEQUENCE_ID={gene_id}\n")
         f.write(f"SEQUENCE_TEMPLATE={sequence}\n")
-        # f.write("PRIMER_PICK_LEFT_PRIMER=1\n")
-        # f.write("PRIMER_PICK_RIGHT_PRIMER=0\n")
-        # # f.write("PRIMER_EXCLUDED_REGION=0,30\n")
         f.write(f"PRIMER_PRODUCT_SIZE_RANGE={min_product_size}-{max_product_size}\n")
         f.write("PRIMER_TASK=pick_primer_list\n")
         f.write("PRIMER_NUM_RETURN=5\n")
@@ -207,27 +224,97 @@ def write_primer3_input2(gene_id, fasta_file, output_file, strand, min_primer=18
         f.write("=\n")
     return output_file_with_strand
 
+# def Run_Primer3(input_file, output_dir):
+#     command = f"singularity run ./primer3/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+#     return command
+
 def Run_Primer3(input_file, output_dir):
     command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
     return command
 
+
 def parse_primer3_output(file_path):
-    primers = {}
     gene_id = None
-    Positions = None
+    primers = {}   # to store primer sequences keyed by side and index (e.g. 'LEFT_0')
+    positions = {} # to store corresponding positions
+    TM={}
+    GC={}
+
+    # Regex patterns to capture primer sequence and position lines:
+    # e.g., "PRIMER_LEFT_0_SEQUENCE=ATCG..."
+    seq_pattern = re.compile(r"PRIMER_LEFT_([0-9]+)_SEQUENCE=(.+)")
+    # e.g., "PRIMER_LEFT_0=123,20" (position and length)
+    pos_pattern = re.compile(r"PRIMER_LEFT_([0-9]+)=(.+)")
+    TM_pattern = re.compile(r"PRIMER_LEFT_([0-9])+_TM=(.+)")
+    GC_pattern = re.compile(r"PRIMER_LEFT_([0-9])+_GC_PERCENT=(.+)")
+
     with open(file_path, 'r') as file:
         for line in file:
             line = line.strip()
+            # Get the gene ID
             if line.startswith("SEQUENCE_ID"):
                 gene_id = line.split('=')[1]
-            elif line.startswith("PRIMER_LEFT_0_SEQUENCE"):
-                primers['left'] = line.split('=')[1]
-            elif line.startswith("PRIMER_RIGHT_0_SEQUENCE"):
-                primers['right'] = line.split('=')[1]
-            elif line.startswith("PRIMER_LEFT_0="):
-                Positions = line.split('=')[1]
-    return gene_id, primers, Positions
+            else:
+                # Check for primer sequence lines
+                seq_match = seq_pattern.match(line)
+                if seq_match:
+                    index = seq_match.group(1)
+                    sequence = seq_match.group(2)
+                    key = f"primer_{index}"
+                    primers[key] = sequence
+                    continue  # move to next line
 
+                # Check for primer position lines (only if needed)
+                pos_match = pos_pattern.match(line)
+                if pos_match:
+                    # To avoid capturing the sequence line again, only record if key doesn't include 'SEQUENCE'
+                    key = f"primer_{pos_match.group(1)}"
+                    # Ensure that this line isn’t a sequence line (we already matched those)
+                    if key not in positions:
+                        pos_and_size = pos_match.group(2)
+                        start = int(pos_and_size.split(',')[0])
+                        primer_size = int(pos_and_size.split(',')[1])
+                        positions[key] = (start, primer_size)
+                    continue
+                TM_match = TM_pattern.match(line)
+                if TM_match:
+                    key = f"primer_{TM_match.group(1)}"
+                    if key not in TM:
+                        TM[key] = TM_match.group(2)
+                    continue
+                
+                GC_match = GC_pattern.match(line)
+                if GC_match:
+                    key = f"primer_{GC_match.group(1)}"
+                    # Check if the key exists in the primers dictionary
+                    if key not in GC:
+                        GC[key] = GC_match.group(2)
+                    continue
+    # Convert the primers dictionary to a list (or you can return the dict if you want the keys)
+    # primer_list = list(primers.values())
+    return gene_id, primers, positions, TM, GC
+
+def write_primers_to_fasta(gene_id, primers, output_path):
+    """
+    Writes primer sequences to a FASTA file.
+
+    Parameters:
+      gene_id (str): The gene identifier.
+      primers (dict): A dictionary with primer indices as keys and sequences as values.
+      output_path (str): The file path where the FASTA file will be written.
+
+    Each FASTA header is in the format: >gene_id_LEFT_index
+    """
+    with open(output_path, 'a') as f:
+        # Sort keys by numerical value if keys are numbers stored as strings.
+        for index in sorted(primers):
+            sequence = primers[index]
+            header = f">{gene_id}_LEFT_{index}"
+            f.write(header + "\n")
+            # Optionally, wrap the sequence to 80 characters per line.
+            for i in range(0, len(sequence), 80):
+                f.write(sequence[i:i+80] + "\n")
+                
 def get_exons(output_dir, gene_id):
     """
     Read the filtered GTF file and extract all unique exon intervals.
@@ -408,7 +495,6 @@ def run_blast_local_command2(sequence, database="core_nt", output_file="blast_re
         f.write(f">query\n{sequence}")
     command = f"ml purge; ml BLAST+/2.14.1-gompi-2023a; blastn -query {input_file} -db {database} -out {output_file} -outfmt 5 -word_size 7 -reward 1 -penalty -3 -gapopen 5 -gapextend 2"
     return command
-#-taxids 9606
 
 def run_blast_remote_command2(sequence, output_file="blast_results.xml"):
     """
@@ -422,7 +508,7 @@ def run_blast_remote_command2(sequence, output_file="blast_results.xml"):
 
 
 
-def main(bam_file, gtf_file, gene_id, ref_genome, window, cov_thresh, min_primer_size, max_primer_size, max_product_size, min_product_size, TM, db, out_dir, repeat_lib):
+def main(bam_file, gtf_file, gene_id, TM, ref_genome, window, cov_thresh, max_primer, min_primer, max_product_size, min_product_size, repeat_lib, db, out_dir):
     # Create an output directory for this gene.
     output_dir = f"{out_dir}/{gene_id}_out"
     if not os.path.exists(output_dir):
@@ -430,15 +516,19 @@ def main(bam_file, gtf_file, gene_id, ref_genome, window, cov_thresh, min_primer
 
     # Step 1: Generate genome coverage.
     coverage_command = get_coverage(bam_file, output_dir)
-    sbatch("get_coverage", coverage_command, 1)
+    if coverage_command:
+        sbatch("get_coverage", coverage_command, 1)
 
     # Step 2: Filter the GTF for the gene.
     filter_gtf_command = filter_gtf(gtf_file, gene_id, output_dir)
-    sbatch("filter_gtf", filter_gtf_command, 2)
+    
+    if filter_gtf_command:
+        sbatch("filter_gtf", filter_gtf_command, 2)
 
     # Step 2.5: Merge the exons for primer design.
     merge_exons_command = merge_exons(output_dir, gene_id)
-    sbatch("merge_exons", merge_exons_command, 2.5)
+    if merge_exons_command:
+        sbatch("merge_exons", merge_exons_command, 2.5)
 
     # Get strand information from the filtered GTF.
     strand = get_strand_from_gtf(gene_id, output_dir)
@@ -467,26 +557,31 @@ def main(bam_file, gtf_file, gene_id, ref_genome, window, cov_thresh, min_primer
     
     fasta_input = f"{output_dir}/{gene_id}_{chrom}_{start_expanded}_{end_expanded}.fa"
     primer3_input_file = f"{output_dir}/{gene_id}_{UTR}_primer3_input"
-    primer3_input_path = write_primer3_input2(gene_id, fasta_input, primer3_input_file, strand, min_primer=min_primer_size, max_primer=max_primer_size, min_product_size=min_product_size, max_product_size=max_product_size, TM=TM, repeat_lib=repeat_lib)
+    primer3_input_path = write_primer3_input2(gene_id, fasta_input, primer3_input_file, strand, TM, min_primer, max_primer, min_product_size, max_product_size, repeat_lib)
     print(f"Primer3 input file written to: {primer3_input_path}")
 
     # Step 7: Run Primer3.
     primer3_output_file = f"{output_dir}/{gene_id}_{strand_label}_primer3_out.txt"
     primer3_command = Run_Primer3(primer3_input_path, primer3_output_file)
     sbatch("Primer3", primer3_command, 7)
-    gene_id_ret, primers, position_primer = parse_primer3_output(primer3_output_file)
+    gene, primer_seqs, primer_positions, TM, GC = parse_primer3_output(primer3_output_file)
+    PrimerFasta_output_file = f"{out_dir}/primers.fa"
+    write_primers_to_fasta(gene, primer_seqs, PrimerFasta_output_file)
 
     # Step 8: Calculate the spliced amplicon size.
-    calculate_amplicon_size(position_primer, strand, zero_cov_coord, start_expanded, end_expanded, output_dir, gene_id)
+    #calculate_amplicon_size(primer_positions, strand, zero_cov_coord, start_expanded, end_expanded, output_dir, gene_id)
 
     # Step 9: Run local BLAST for each primer.
-    if not primers:
+    # primer_seqs is a dictionary where keys are primer indices (e.g., 'primer_0', 'primer_1', ...)
+    # and values are the corresponding primer sequences (strings).
+    if not primer_seqs:
         print(f"No primers found in the Primer3 file {primer3_output_file}")
+        return None
     else:
-        for primer_type, primer_sequence in primers.items():
-            print(f"Running BLAST for {primer_type} primer: {primer_sequence}")
+        for primer_name, primers in primer_seqs.items():
+            print(f"Running BLAST for {primer_name} primer: {primers}")
             # db = "/user/gent/446/vsc44685/ScratchVO_dir/NSQ2K_126_test/primer_design/blast_corent/core_nt"
-            out_file = f"{output_dir}/{gene_id}_{primer_type}_blast.xml"
-            blast = run_blast_local_command2(primer_sequence, db, out_file)
+            out_file = f"{output_dir}/{gene_id}_{primer_name}_blast.xml"
+            blast = run_blast_local_command2(primers, db, out_file)
             # blast = run_blast_remote_command2(primer_sequence, out_file)
             sbatch("blast", blast, 8)
