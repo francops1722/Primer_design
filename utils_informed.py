@@ -224,13 +224,13 @@ def write_primer3_input2(gene_id, fasta_file, output_file, strand, TM, min_prime
         f.write("=\n")
     return output_file_with_strand
 
-# def Run_Primer3(input_file, output_dir):
-#     command = f"singularity run ./primer3/primer3_v2.5.0.sif --output={output_dir} {input_file}"
-#     return command
-
 def Run_Primer3(input_file, output_dir):
-    command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+    command = f"singularity run ./primer3/primer3v2.6.1.sif primer3_core --output={output_dir} {input_file}"
     return command
+
+# def Run_Primer3(input_file, output_dir):
+#     command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+#     return command
 
 
 def parse_primer3_output(file_path):

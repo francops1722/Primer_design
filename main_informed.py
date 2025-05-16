@@ -1,6 +1,6 @@
 
 from utils_informed import main
-from utils import (sbatch, run_bowtie2_command, run_make_alignment_summary)
+from utils import (sbatch, run_bowtie2_command, run_make_alignment_summary, Select_unique_primers)
 import argparse
 # Parse command line arguments.
 parser = argparse.ArgumentParser(description="Process BAM and GTF files for a specific gene.")
@@ -55,6 +55,7 @@ with open(gene_ids_file, 'r') as file:
     sbatch("bowtie2", bowtie2_command, 9)
     sam_summary=f"{output_dir}/Alignment_summary.tsv"
     bowtie_summary = run_make_alignment_summary(transcriptome, sam_file, sam_summary)
+    Select_unique_primers(sam_summary, output_dir)
     sbatch('Bowtie_summary', bowtie_summary, 8)
     print("All steps finished.")
             

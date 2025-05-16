@@ -1,0 +1,37 @@
+Index Read 2 is marked as Reverse Complement in RunInfo.xml: The barcode and UMI outputs will be output in Reverse Complement of Sample Sheet inputs.
+Sample sheet being processed by common lib? No
+SampleSheet Settings: 
+  AdapterRead1 = AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+  BarcodeMismatchesIndex1 = 1
+  AdapterRead2 = AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+  BarcodeMismatchesIndex2 = 1
+  AdapterBehavior = trim
+
+shared-thread-linux-native-asio output is disabled
+bcl-convert Version 4.3.13
+Copyright (c) 2014-2022 Illumina, Inc.
+Command Line: --bcl-input-directory /scratch/gent/vo/000/gvo00027/projects/FAP/250513_VH00559_201_AAGVVYCM5 --output-directory /user/gent/446/vsc44685/DataVO_dir/NSQ2K_201 
+Conversion Begins.
+Input BCL Information:
+    Read Structure: Y47;I8;I8;Y54
+    RunInfo.xml file lists: 1 lanes, 32 tiles
+    BCL file format: cbcl
+    Positions file format: slocs
+    Filter file format: filter
+Conversion Information:
+    Sample Count: 20
+    Expected number of sample FASTQ files to be created: 40
+# CPU hw threads available: 48
+Parallel Tiles: 4. Threads Per Tile: 12
+SW compressors: 48
+SW decompressors: 24
+SW FASTQ compression level: 1
+Lane 1 Post-run Information:
+    Total clusters: 35588875
+    Total Genomic Reads: 71177750
+    Total Genomic Input Gigabases 3.59
+    Minimum reads for a sample: 9270
+    Maximum reads for a sample: 6389978
+    Average reads per sample: 1839846.80
+    Undetermined reads: 34380814
+Conversion Complete.

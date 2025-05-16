@@ -13,6 +13,7 @@ python3 main_informed.py --gene_id ./testdata/gene_ids.txt \
     --max_product_size 80 \
     --gtf_file /data/gent/vo/000/gvo00027/resources/Ensembl_transcriptomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.109.chrIS_spikes_45S.gtf \
     --btw_index /data/gent/vo/000/gvo00027/resources/Bowtie2_index/Homo_sapiens/Transcriptome_Homo_sapiens.GRCh38.109.chrIS_spikes_45S/bowtie2_index \
+    --transcriptome /data/gent/vo/000/gvo00027/resources/Ensembl_transcriptomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.109.chrIS_spikes_45S.fa \
     --blastDB /data/gent/vo/000/gvo00027/resources/Blast_databases/RefSeq_select/human_refseq_db \
     --ref_genome /data/gent/vo/000/gvo00027/resources/Ensembl_genomes/Homo_sapiens/GRCh38/Homo_sapiens.GRCh38.dna.primary_assembly.chrIS_spikes_45S.fa \
     --window 60 \

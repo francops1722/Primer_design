@@ -1,0 +1,3 @@
+WARNING: Sample Sheet Warning: 'Sample_Project' column is present in the sample sheet, but not enabled on the command line.
+WARNING: Sample Sheet Warning: No per-sample subdirectories will be created using Sample_Project.
+WARNING: Insufficient hamming distance in the i7 index sequences to identify index hopped reads in lane 1. Index hopping report is only produced for unique dual indexes.

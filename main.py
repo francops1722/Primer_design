@@ -16,7 +16,7 @@ import re
 from Bio import SeqIO
 
 from utils import (
-    main, sbatch, run_bowtie2_command, run_make_alignment_summary 
+    main, sbatch, run_bowtie2_command, run_make_alignment_summary, Select_unique_primers 
 )
 
 
@@ -59,6 +59,7 @@ if __name__ == "__main__":
     sbatch("bowtie2", bowtie2_command, 7)
     sam_summary=f"{out_dir}/Alignment_summary.tsv"
     bowtie_summary = run_make_alignment_summary(transcriptome, sam_file, sam_summary)
+    Select_unique_primers(sam_summary, out_dir)
     sbatch('Bowtie_summary', bowtie_summary, 8)
     print("All steps finished.")
 

@@ -131,13 +131,13 @@ def write_primer3_input(gene_id, mRNA, output_file, TM=60.0, min_primer=18, max_
     return output_file
 
 
-# def Run_Primer3(input_file, output_dir):
-#     command = f"singularity run ./primer3/primer3_v2.5.0.sif --output={output_dir} {input_file}"
-#     return command
-
 def Run_Primer3(input_file, output_dir):
-    command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+    command = f"singularity run ./primer3/primer3v2.6.1.sif primer3_core --output={output_dir} {input_file}"
     return command
+
+# def Run_Primer3(input_file, output_dir):
+#     command = f"singularity run /scratch/gent/vo/000/gvo00027/singularity_containers/primer3_v2.5.0.sif --output={output_dir} {input_file}"
+#     return command
 
 
 def parse_primer3_output(file_path):
@@ -281,7 +281,25 @@ def make_primer_dataframe(gene, primer_seqs, primer_positions, TM, GC, ampl_size
         df_new.to_csv(file_path, index=False)
         return df_new
 
-    
+def Select_unique_primers(summary_path, out_dir):
+    df = pd.read_csv(summary_path, sep="\t")
+    # filter out the reverse-direction hits
+    df = df[df.direction != 'reverse']
+
+    # group by query_name + Primer_Index
+    grp = df.groupby(['query_name', 'Primer_Index'])
+
+    # multi-mappers = groups with more than one distinct gene name
+    multi = grp.filter(lambda g: g['map_to_gene_name'].nunique() > 1)
+    unique = grp.filter(lambda g: g['map_to_gene_name'].nunique() == 1)
+
+    # write headers + data in one shot
+    out_multi = os.path.join(out_dir, "Filter_multi.tsv")
+    out_uniq  = os.path.join(out_dir, "Filter_unique.tsv")
+
+    multi.to_csv(out_multi, sep="\t", index=False, mode='w')
+    unique.to_csv(out_uniq, sep="\t", index=False, mode='w')
+
 
 def main(out_dir, gtf_file, gene_id, ampl_size, TM, lib):
     output_dir = f"{out_dir}/{gene_id}_out"
